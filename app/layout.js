@@ -23,6 +23,19 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${playfair.variable} ${lato.variable}`}>
+      <head>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-DJ05FCHRZG" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-DJ05FCHRZG');
+            `,
+          }}
+        />
+      </head>
       <body className="font-body bg-white text-gray-900">
         {children}
       </body>
