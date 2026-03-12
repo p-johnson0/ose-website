@@ -65,11 +65,8 @@ export async function POST(request) {
       }),
     })
 
-    if (!emailRes.ok) {
-      const err = await emailRes.json()
-      console.error('Resend error:', err)
-      // Don't fail the whole request — still create the lead
-    }
+    const emailResult = emailRes.ok ? 'sent' : await emailRes.json()
+    if (!emailRes.ok) console.error('Resend error:', emailResult)
 
     // ── 2. Create Lead in Supabase (OSE App) ─────────────────────────────
     const projectName = organization
@@ -79,26 +76,35 @@ export async function POST(request) {
     const { error: dbError } = await supabase
       .from('projects')
       .insert({
-        name: projectName,
+        project_name: projectName,
+        project_type: 'Unknown',
+        organization: organization || null,
         contact_name: name,
         contact_email: email,
         contact_phone: phone || null,
-        address: organization || null,
         status: 'Lead',
         notes: message
           ? `Website inquiry:\n\n${message}`
           : 'Submitted via website contact form.',
-        bid_amount: null,
-        project_type: 'Unknown',
-        lead_date: new Date().toISOString(),
+        lead_date: new Date().toISOString().split('T')[0],
+        is_project_group: false,
+        is_multi_location: false,
       })
 
-    if (dbError) {
-      console.error('Supabase error:', dbError)
-      // Don't fail — email was sent, lead creation is bonus
-    }
+    if (dbError) console.error('Supabase error:', dbError)
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      debug: {
+        email: emailResult,
+        supabase: dbError ? dbError.message : 'ok',
+        env: {
+          resend: !!process.env.RESEND_API_KEY,
+          supabaseUrl: !!process.env.SUPABASE_URL,
+          supabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        }
+      }
+    })
   } catch (err) {
     console.error('Contact route error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
