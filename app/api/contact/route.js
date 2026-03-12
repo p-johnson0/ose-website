@@ -93,18 +93,7 @@ export async function POST(request) {
 
     if (dbError) console.error('Supabase error:', dbError)
 
-    return NextResponse.json({
-      success: true,
-      debug: {
-        email: emailResult,
-        supabase: dbError ? dbError.message : 'ok',
-        env: {
-          resend: !!process.env.RESEND_API_KEY,
-          supabaseUrl: !!process.env.SUPABASE_URL,
-          supabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        }
-      }
-    })
+    return NextResponse.json({ success: true })
   } catch (err) {
     console.error('Contact route error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
