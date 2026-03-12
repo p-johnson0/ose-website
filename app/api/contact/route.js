@@ -23,7 +23,7 @@ export async function POST(request) {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'OSE Website <quotes@omahastageequipment.com>',
+        from: 'OSE Website <onboarding@resend.dev>',
         to: ['Pat@omahastageequipment.com'],
         reply_to: email,
         subject: `New Quote Request — ${organization || name}`,
