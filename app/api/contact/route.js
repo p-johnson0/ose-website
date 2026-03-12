@@ -24,7 +24,7 @@ export async function POST(request) {
       },
       body: JSON.stringify({
         from: 'OSE Website <onboarding@resend.dev>',
-        to: ['Pat@omahastageequipment.com'],
+        to: ['pat@omahastageequipment.com'],
         reply_to: email,
         subject: `New Quote Request — ${organization || name}`,
         html: `
@@ -77,7 +77,7 @@ export async function POST(request) {
       .from('projects')
       .insert({
         project_name: projectName,
-        project_type: 'Unknown',
+        project_type: 'Curtains',
         organization: organization || null,
         contact_name: name,
         contact_email: email,
