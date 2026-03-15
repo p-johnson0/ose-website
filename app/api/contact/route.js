@@ -165,6 +165,25 @@ export async function POST(request) {
 
     if (dbError) console.error('Supabase insert error:', dbError)
 
+    // ── 3. Push notification for new lead ─────────────────────────────────────
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.omahastageequipment.com';
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      fetch(appUrl + '/api/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + cronSecret,
+        },
+        body: JSON.stringify({
+          title: 'New Website Lead',
+          body: (organization || name) + ' — ' + (message ? message.substring(0, 80) : 'Quote request submitted'),
+          url: '/projects',
+          tag: 'lead-' + Date.now(),
+        }),
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('Contact route error:', err)
