@@ -211,7 +211,7 @@ function Ticker() {
 }
 
 function ContactForm() {
-  const [values, setValues] = useState({ name: '', organization: '', phone: '', email: '', message: '' })
+  const [values, setValues] = useState({ name: '', organization: '', phone: '', email: '', message: '', website: '' })
   const [status, setStatus] = useState('idle') // idle | loading | success | error
 
   const field = {
@@ -241,7 +241,7 @@ function ContactForm() {
       })
       if (res.ok) {
         setStatus('success')
-        setValues({ name: '', organization: '', phone: '', email: '', message: '' })
+        setValues({ name: '', organization: '', phone: '', email: '', message: '', website: '' })
       } else {
         setStatus('error')
       }
@@ -269,6 +269,11 @@ function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit}>
+      {/* Honeypot — hidden from humans, bots fill it in */}
+      <div style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none' }} aria-hidden="true">
+        <label htmlFor="website">Website (leave blank)</label>
+        <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" value={values.website} onChange={handleChange} />
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 40px' }}>
         {[
           { label: 'Full Name', name: 'name', type: 'text', required: true },
