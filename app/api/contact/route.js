@@ -77,12 +77,9 @@ export async function POST(request) {
     const safeEmail = escapeHtml(email)
     const safeMessage = escapeHtml(message)
 
-    // ── Use anon key — NOT service role key ───────────────────────────────
-    // Service role key must never be used on the public website.
-    // The anon key with Supabase RLS handles inserts safely.
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     )
 
     // ── 1. Send email via Resend ───────────────────────────────────────────
