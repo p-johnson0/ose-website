@@ -259,7 +259,7 @@ function ContactForm() {
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 700, color: '#0a0007', letterSpacing: '-0.01em' }}>Message Received</div>
-            <div style={{ fontSize: 14, color: '#666', marginTop: 4 }}>We\'ll be in touch within one business day.</div>
+            <div style={{ fontSize: 14, color: '#666', marginTop: 4 }}>We&apos;ll be in touch within one business day.</div>
           </div>
         </div>
         <button onClick={() => setStatus('idle')} style={{ fontSize: 12, color: '#c5a028', background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, padding: 0 }}>Send another message</button>
