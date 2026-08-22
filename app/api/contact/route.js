@@ -77,12 +77,61 @@ export async function POST(request) {
     const safeEmail = escapeHtml(email)
     const safeMessage = escapeHtml(message)
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    // ── 1. Create the Lead in Supabase FIRST ───────────────────────────────
+    // Done before the email so a failed save (bad key, DB down) can be surfaced
+    // loudly in the email itself — the email is our safety net, never let a lead
+    // vanish silently again.
+    const projectName = organization
+      ? `${organization} — Website Inquiry`
+      : `${name} — Website Inquiry`
 
-    // ── 1. Send email via Resend ───────────────────────────────────────────
+    let leadSaved = false
+    let leadErrorMsg = null
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      leadErrorMsg = 'Supabase not configured (missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY on the server)'
+      console.error('Contact route:', leadErrorMsg)
+    } else {
+      try {
+        const supabase = createClient(
+          process.env.SUPABASE_URL,
+          process.env.SUPABASE_SERVICE_ROLE_KEY
+        )
+        const { error: dbError } = await supabase
+          .from('projects')
+          .insert({
+            project_name: projectName,
+            project_type: 'Curtains',
+            organization: organization || null,
+            contact_name: name,
+            contact_email: email,
+            contact_phone: phone || null,
+            status: 'Lead',
+            notes: message
+              ? `Website inquiry:\n\n${message}`
+              : 'Submitted via website contact form.',
+            lead_date: new Date().toISOString().split('T')[0],
+            is_project_group: false,
+            is_multi_location: false,
+          })
+        if (dbError) {
+          leadErrorMsg = dbError.message || 'unknown database error'
+          console.error('Supabase insert error:', dbError)
+        } else {
+          leadSaved = true
+        }
+      } catch (e) {
+        leadErrorMsg = e?.message || String(e)
+        console.error('Supabase insert threw:', e)
+      }
+    }
+
+    // ── 2. Send email via Resend (with a loud banner if the lead didn't save) ─
+    const failBanner = leadSaved ? '' : `
+      <div style="background: #b91c1c; color: #fff; padding: 16px 20px; border-radius: 6px; margin-bottom: 24px;">
+        <div style="font-size: 16px; font-weight: 700; margin: 0 0 4px;">⚠ This lead did NOT save to the app</div>
+        <div style="font-size: 13px; color: #ffe4e4;">Add it manually in the app — all the details are below. (Reason: ${escapeHtml(leadErrorMsg || 'unknown')})</div>
+      </div>`
+
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -93,9 +142,10 @@ export async function POST(request) {
         from: 'OSE Website <quotes@omahastageequipment.com>',
         to: ['pat@omahastageequipment.com'],
         reply_to: email,
-        subject: `New Quote Request — ${safeOrg || safeName}`,
+        subject: `${leadSaved ? '' : '⚠ [LEAD DID NOT SAVE] '}New Quote Request — ${safeOrg || safeName}`,
         html: `
           <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 32px; background: #fff;">
+            ${failBanner}
             <div style="border-top: 3px solid #c5a028; padding-top: 24px; margin-bottom: 32px;">
               <h1 style="font-size: 22px; color: #0a0007; margin: 0 0 4px;">New Quote Request</h1>
               <p style="font-size: 13px; color: #888; margin: 0;">From omahastageequipment.com</p>
@@ -137,31 +187,6 @@ export async function POST(request) {
       console.error('Resend error:', emailErr)
     }
 
-    // ── 2. Create Lead in Supabase ─────────────────────────────────────────
-    const projectName = organization
-      ? `${organization} — Website Inquiry`
-      : `${name} — Website Inquiry`
-
-    const { error: dbError } = await supabase
-      .from('projects')
-      .insert({
-        project_name: projectName,
-        project_type: 'Curtains',
-        organization: organization || null,
-        contact_name: name,
-        contact_email: email,
-        contact_phone: phone || null,
-        status: 'Lead',
-        notes: message
-          ? `Website inquiry:\n\n${message}`
-          : 'Submitted via website contact form.',
-        lead_date: new Date().toISOString().split('T')[0],
-        is_project_group: false,
-        is_multi_location: false,
-      })
-
-    if (dbError) console.error('Supabase insert error:', dbError)
-
     // ── 3. Push notification for new lead ─────────────────────────────────────
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.omahastageequipment.com';
     const cronSecret = process.env.CRON_SECRET;
@@ -173,7 +198,7 @@ export async function POST(request) {
           'Authorization': 'Bearer ' + cronSecret,
         },
         body: JSON.stringify({
-          title: 'New Website Lead',
+          title: leadSaved ? 'New Website Lead' : '⚠ Website Lead did NOT save',
           body: (organization || name) + ' — ' + (message ? message.substring(0, 80) : 'Quote request submitted'),
           url: '/projects',
           tag: 'lead-' + Date.now(),
